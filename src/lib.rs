@@ -1,4 +1,5 @@
 mod add;
+mod diff;
 mod display;
 mod mul;
 mod sub;
@@ -35,6 +36,16 @@ impl From<f64> for Poly {
 }
 
 impl Poly {
+    pub fn eval(&self, x: f64) -> f64 {
+        let mut total = 0.0;
+        let mut y = x.powi(self.exp as i32);
+        for &c in self.coefs.iter().rev() {
+            total += c * y;
+            y *= x;
+        }
+        total
+    }
+
     pub const fn zero() -> Self {
         Self {
             coefs: Vec::new(),
@@ -49,12 +60,22 @@ impl Poly {
         }
     }
 
-    /// Determines the [degree of the polynomial](https://en.wikipedia.org/wiki/Degree_of_a_polynomial)
-    pub fn degree(&self) -> isize {
+    /// Determines the [degree of the polynomial](https://en.wikipedia.org/wiki/Degree_of_a_polynomial).
+    /// Returns `None` for the zero-polynomial.
+    pub fn degree(&self) -> Option<isize> {
+        if self.is_zero() {
+            None
+        } else {
+            Some(self.partial_degree())
+        }
+    }
+    /// Determines the [degree of the polynomial](https://en.wikipedia.org/wiki/Degree_of_a_polynomial).
+    /// Returns an undefined value for the zero-polynomial.
+    pub fn partial_degree(&self) -> isize {
         (self.coefs.len() as isize) + self.exp - 1
     }
 
-    /// Converts both types to have matching inner representations
+    /// Converts both polynomials to have the same exponent.
     fn normalise_with(&mut self, other: &mut Self) {
         self.reduce();
         other.reduce();
@@ -73,7 +94,9 @@ impl Poly {
         }
     }
 
+    /// Reduces the polynomial to have the least amount of trailing and leading zeros
     fn reduce(&mut self) {
+        // trim trailing 0s (increasing the exp)
         let mut len = self.coefs.len();
         for c in self.coefs.iter().rev() {
             if *c == 0.0 {
@@ -83,15 +106,22 @@ impl Poly {
             }
             break;
         }
-        self.coefs.resize(len, 0.0);
+        self.coefs.truncate(len);
+
+        // trim leading 0s
+        let mut leading = 0;
+        for c in self.coefs.iter() {
+            if *c == 0.0 {
+                leading += 1;
+                continue;
+            }
+            break;
+        }
+        self.coefs.drain(..leading);
     }
 
-    // fn reduced_is_zero(&mut self) -> bool {
-    //     self.reduce();
-    //     self.is_zero()
-    // }
     fn is_zero(&self) -> bool {
-        self.coefs.is_empty()
+        self.coefs.iter().all(|c| *c == 0.0)
     }
 }
 
@@ -102,11 +132,11 @@ mod tests {
     #[test]
     fn from_f64() {
         let x = Poly::from(1.0);
-        assert_eq!(x.degree(), 0);
+        assert_eq!(x.partial_degree(), 0);
         assert_eq!(x.coefs, [1.0]);
 
         let y = Poly::from(0.0);
-        assert_eq!(y.degree(), 0);
+        assert_eq!(y.partial_degree(), 0);
         assert!(y.coefs.is_empty());
     }
 
@@ -173,30 +203,21 @@ mod tests {
     }
 
     #[test]
-    fn display() {
-        // x^4 - 2x^2 + 3.5x
-        let quart = Poly {
-            coefs: vec![1.0, 0.0, -2.0, 3.5],
-            exp: 1,
-        };
-
-        assert_eq!(quart.to_string(), "x^4 - 2x^2 + 3.5x");
-
-        // -x + x^-1
-        let quart = Poly {
-            coefs: vec![-1.0, 0.0, 1.0],
-            exp: -1,
-        };
-
-        assert_eq!(quart.to_string(), "-x + x^-1");
-    }
-
-    #[test]
     fn ops() {
         let x = Poly::x();
         assert_eq!(&x + &x, &x * 2.0);
 
         let y = &x * &x + &x;
         assert_eq!(y.to_string(), "x^2 + x");
+    }
+
+    #[test]
+    fn eval() {
+        // x^4 + 0 + 2x^2 + 0
+        let quart = Poly {
+            coefs: vec![1.0, 0.0, 2.0, 0.0],
+            exp: 1,
+        };
+        assert_eq!(quart.eval(4.0), 288.0);
     }
 }

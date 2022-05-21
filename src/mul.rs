@@ -10,6 +10,7 @@ impl Mul<f64> for Poly {
         self
     }
 }
+
 impl Mul<f64> for &Poly {
     type Output = Poly;
 
@@ -53,6 +54,7 @@ impl Mul for Poly {
         }
     }
 }
+
 impl Mul for &Poly {
     type Output = Poly;
 
@@ -63,6 +65,7 @@ impl Mul for &Poly {
         Poly::mul_impl(self, rhs)
     }
 }
+
 impl Mul<Poly> for &Poly {
     type Output = Poly;
 
@@ -77,6 +80,7 @@ impl Mul<Poly> for &Poly {
         }
     }
 }
+
 impl Mul<&Poly> for Poly {
     type Output = Poly;
 
